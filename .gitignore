@@ -7,7 +7,14 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 
-# Large class datasets (not part of the pipeline project)
+# Class files not part of the pipeline project
+Chapter_*.ipynb
+Cleaning_automation.ipynb
+In-class Classification.ipynb
+Stats_Multivariate_Categorical.ipynb
+modeling.ipynb
+data_cleaning.py
+run_cleaning.py
 CreditCardData.csv
 job_search_cleaned.csv
 job_search_platform_efficacy_100k.csv
