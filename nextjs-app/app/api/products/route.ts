@@ -7,7 +7,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("products")
     .select("product_id, product_name, category, price")
-    .eq("is_active", true)
+    .eq("is_active", 1)
     .order("product_name");
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
