@@ -2,7 +2,7 @@ import "./globals.css";
 import { cookies } from "next/headers";
 import { supabase } from "@/lib/db";
 
-export const metadata = { title: "Fraud Detection Pipeline" };
+export const metadata = { title: "Shop ML Pipeline" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   let customerName = "";
@@ -21,12 +21,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <body>
         <nav>
-          <span className="brand">Fraud Detection Pipeline</span>
+          <span className="brand">Shop ML Pipeline</span>
           <a href="/select-customer">Customers</a>
           <a href="/dashboard">Dashboard</a>
           <a href="/place-order">Place Order</a>
           <a href="/orders">Orders</a>
-          <a href="/warehouse/priority">Fraud Queue</a>
+          <a href="/warehouse/priority">Warehouse</a>
           <a href="/scoring">Run Scoring</a>
           {customerName && (
             <span style={{ marginLeft: "auto", color: "#93c5fd", fontSize: "0.85rem" }}>

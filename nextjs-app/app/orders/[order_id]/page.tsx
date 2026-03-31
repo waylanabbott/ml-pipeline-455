@@ -10,7 +10,7 @@ export default async function OrderDetail({ params }: { params: Promise<{ order_
     .from("orders")
     .select(`
       *, customers(full_name, customer_segment, loyalty_tier),
-      order_predictions(fraud_probability, predicted_fraud, scored_at)
+      delivery_predictions(late_probability, predicted_late, scored_at)
     `)
     .eq("order_id", Number(order_id))
     .single();
@@ -29,8 +29,8 @@ export default async function OrderDetail({ params }: { params: Promise<{ order_
     .single();
 
   const customer = Array.isArray(order.customers) ? order.customers[0] : order.customers;
-  const prediction = Array.isArray(order.order_predictions) ? order.order_predictions[0] : order.order_predictions;
-  const fraudProb = prediction?.fraud_probability as number | null;
+  const prediction = Array.isArray(order.delivery_predictions) ? order.delivery_predictions[0] : order.delivery_predictions;
+  const lateProb = prediction?.late_probability as number | null;
 
   return (
     <>
@@ -53,22 +53,30 @@ export default async function OrderDetail({ params }: { params: Promise<{ order_
         </div>
 
         <div className="card">
-          <h3 style={{ marginBottom: "0.5rem" }}>Fraud Analysis</h3>
-          <p>Risk Score: <strong>{order.risk_score.toFixed(1)}</strong></p>
-          <p>
-            Actual:{" "}
-            {order.is_fraud === 1
-              ? <span className="badge badge-danger">FRAUD</span>
-              : <span className="badge badge-success">OK</span>}
-          </p>
-          <hr style={{ margin: "0.75rem 0", border: "none", borderTop: "1px solid #e5e7eb" }} />
-          {fraudProb != null ? (
+          <h3 style={{ marginBottom: "0.5rem" }}>Delivery Prediction</h3>
+          {shipment ? (
             <>
-              <p>ML Fraud Probability: <strong>{(fraudProb * 100).toFixed(1)}%</strong></p>
+              <p>Carrier: <strong>{shipment.carrier}</strong></p>
+              <p>Method: {shipment.shipping_method}</p>
+              <p>Distance: {shipment.distance_band}</p>
+              <p>Promised: {shipment.promised_days} days</p>
+              <p>Actual: {shipment.actual_days} days</p>
+              <p>
+                Status:{" "}
+                {shipment.late_delivery === 1
+                  ? <span className="badge badge-danger">LATE</span>
+                  : <span className="badge badge-success">ON TIME</span>}
+              </p>
+            </>
+          ) : <p style={{ color: "#9ca3af" }}>No shipment yet</p>}
+          <hr style={{ margin: "0.75rem 0", border: "none", borderTop: "1px solid #e5e7eb" }} />
+          {lateProb != null ? (
+            <>
+              <p>ML Late Probability: <strong>{(lateProb * 100).toFixed(1)}%</strong></p>
               <div className="prob-bar" style={{ width: "100%", marginTop: 8 }}>
                 <div className="fill" style={{
-                  width: `${fraudProb * 100}%`,
-                  background: fraudProb > 0.5 ? "#dc2626" : fraudProb > 0.3 ? "#d97706" : "#16a34a",
+                  width: `${lateProb * 100}%`,
+                  background: lateProb > 0.7 ? "#dc2626" : lateProb > 0.5 ? "#d97706" : "#16a34a",
                 }} />
               </div>
               <p style={{ fontSize: "0.8rem", color: "#9ca3af", marginTop: 4 }}>
@@ -78,17 +86,6 @@ export default async function OrderDetail({ params }: { params: Promise<{ order_
           ) : <p style={{ color: "#9ca3af" }}>Not yet scored by ML model</p>}
         </div>
       </div>
-
-      {shipment && (
-        <div className="card" style={{ marginBottom: "1rem" }}>
-          <h3 style={{ marginBottom: "0.5rem" }}>Shipment</h3>
-          <p>Carrier: {shipment.carrier} | Method: {shipment.shipping_method} | Distance: {shipment.distance_band}</p>
-          <p>
-            Promised: {shipment.promised_days}d | Actual: {shipment.actual_days}d
-            {shipment.late_delivery === 1 && <span className="badge badge-warning" style={{ marginLeft: 8 }}>LATE</span>}
-          </p>
-        </div>
-      )}
 
       <div className="card">
         <h3 style={{ marginBottom: "0.5rem" }}>Line Items</h3>

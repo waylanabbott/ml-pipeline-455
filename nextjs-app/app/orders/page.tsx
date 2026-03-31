@@ -12,8 +12,9 @@ export default async function OrdersPage() {
   const { data: orders } = await supabase
     .from("orders")
     .select(`
-      order_id, order_datetime, order_total, payment_method, device_type, ip_country, risk_score, is_fraud,
-      order_predictions(fraud_probability, predicted_fraud)
+      order_id, order_datetime, order_total, payment_method, device_type, ip_country,
+      shipments(carrier, shipping_method, late_delivery),
+      delivery_predictions(late_probability, predicted_late)
     `)
     .eq("customer_id", Number(cid))
     .order("order_datetime", { ascending: false });
@@ -29,16 +30,16 @@ export default async function OrdersPage() {
               <th>Date</th>
               <th>Total</th>
               <th>Payment</th>
-              <th>Device</th>
-              <th>IP Country</th>
-              <th>Risk Score</th>
-              <th>ML Fraud Prob</th>
-              <th>Actual</th>
+              <th>Carrier</th>
+              <th>Method</th>
+              <th>ML Late Prob</th>
+              <th>Delivery</th>
             </tr>
           </thead>
           <tbody>
             {(orders || []).map((o: Record<string, unknown>) => {
-              const prediction = Array.isArray(o.order_predictions) ? o.order_predictions[0] : o.order_predictions;
+              const shipment = Array.isArray(o.shipments) ? o.shipments[0] : o.shipments;
+              const prediction = Array.isArray(o.delivery_predictions) ? o.delivery_predictions[0] : o.delivery_predictions;
 
               return (
                 <tr key={o.order_id as number}>
@@ -46,18 +47,19 @@ export default async function OrdersPage() {
                   <td>{(o.order_datetime as string).slice(0, 10)}</td>
                   <td>${(o.order_total as number).toFixed(2)}</td>
                   <td>{o.payment_method as string}</td>
-                  <td>{o.device_type as string}</td>
-                  <td>{o.ip_country as string}</td>
-                  <td>{(o.risk_score as number).toFixed(1)}</td>
+                  <td>{(shipment?.carrier as string) || "—"}</td>
+                  <td>{(shipment?.shipping_method as string) || "—"}</td>
                   <td>
-                    {prediction?.fraud_probability != null
-                      ? `${((prediction.fraud_probability as number) * 100).toFixed(1)}%`
+                    {prediction?.late_probability != null
+                      ? `${((prediction.late_probability as number) * 100).toFixed(1)}%`
                       : "—"}
                   </td>
                   <td>
-                    {(o.is_fraud as number) === 1
-                      ? <span className="badge badge-danger">FRAUD</span>
-                      : <span className="badge badge-success">OK</span>}
+                    {shipment?.late_delivery != null ? (
+                      (shipment.late_delivery as number) === 1
+                        ? <span className="badge badge-danger">LATE</span>
+                        : <span className="badge badge-success">ON TIME</span>
+                    ) : <span style={{ color: "#9ca3af" }}>Pending</span>}
                   </td>
                 </tr>
               );

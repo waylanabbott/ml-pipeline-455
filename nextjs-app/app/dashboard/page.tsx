@@ -19,19 +19,27 @@ export default async function Dashboard() {
 
   const { data: orderRows } = await supabase
     .from("orders")
-    .select("order_total, is_fraud")
+    .select("order_total")
     .eq("customer_id", customerId);
 
   const totalOrders = orderRows?.length || 0;
   const totalSpent = orderRows?.reduce((s, o) => s + o.order_total, 0) || 0;
   const avgOrder = totalOrders > 0 ? totalSpent / totalOrders : 0;
-  const fraudCount = orderRows?.filter((o) => o.is_fraud === 1).length || 0;
+
+  const { data: lateRows } = await supabase
+    .from("shipments")
+    .select("order_id, late_delivery, orders!inner(customer_id)")
+    .eq("late_delivery", 1)
+    .eq("orders.customer_id", customerId);
+
+  const lateCount = lateRows?.length || 0;
 
   const { data: recentOrders } = await supabase
     .from("orders")
     .select(`
-      order_id, order_datetime, order_total, payment_method, risk_score, is_fraud,
-      order_predictions(fraud_probability)
+      order_id, order_datetime, order_total, payment_method,
+      shipments(carrier, late_delivery),
+      delivery_predictions(late_probability)
     `)
     .eq("customer_id", customerId)
     .order("order_datetime", { ascending: false })
@@ -58,10 +66,10 @@ export default async function Dashboard() {
           <div className="label">Avg Order</div>
         </div>
         <div className="stat-card">
-          <div className="value" style={{ color: fraudCount > 0 ? "#dc2626" : "#16a34a" }}>
-            {fraudCount}
+          <div className="value" style={{ color: lateCount > 0 ? "#d97706" : "#16a34a" }}>
+            {lateCount}
           </div>
-          <div className="label">Fraud Orders</div>
+          <div className="label">Late Deliveries</div>
         </div>
       </div>
 
@@ -74,15 +82,17 @@ export default async function Dashboard() {
               <th>Date</th>
               <th>Total</th>
               <th>Payment</th>
-              <th>Risk Score</th>
-              <th>ML Fraud Prob</th>
-              <th>Actual</th>
+              <th>Carrier</th>
+              <th>ML Late Prob</th>
+              <th>Delivery</th>
             </tr>
           </thead>
           <tbody>
             {(recentOrders || []).map((o: Record<string, unknown>) => {
-              const prediction = Array.isArray(o.order_predictions) ? o.order_predictions[0] : o.order_predictions;
-              const prob = prediction?.fraud_probability as number | undefined;
+              const shipment = Array.isArray(o.shipments) ? o.shipments[0] : o.shipments;
+              const prediction = Array.isArray(o.delivery_predictions) ? o.delivery_predictions[0] : o.delivery_predictions;
+              const prob = prediction?.late_probability as number | undefined;
+              const lateDelivery = shipment?.late_delivery as number | undefined;
 
               return (
                 <tr key={o.order_id as number}>
@@ -90,7 +100,7 @@ export default async function Dashboard() {
                   <td>{(o.order_datetime as string).slice(0, 10)}</td>
                   <td>${(o.order_total as number).toFixed(2)}</td>
                   <td>{o.payment_method as string}</td>
-                  <td>{(o.risk_score as number).toFixed(1)}</td>
+                  <td>{(shipment?.carrier as string) || "—"}</td>
                   <td>
                     {prob != null ? (
                       <>
@@ -98,16 +108,18 @@ export default async function Dashboard() {
                         <div className="prob-bar" style={{ width: 80, marginTop: 4 }}>
                           <div className="fill" style={{
                             width: `${prob * 100}%`,
-                            background: prob > 0.5 ? "#dc2626" : prob > 0.3 ? "#d97706" : "#16a34a",
+                            background: prob > 0.7 ? "#dc2626" : prob > 0.5 ? "#d97706" : "#16a34a",
                           }} />
                         </div>
                       </>
                     ) : <span style={{ color: "#9ca3af" }}>Not scored</span>}
                   </td>
                   <td>
-                    {(o.is_fraud as number) === 1
-                      ? <span className="badge badge-danger">FRAUD</span>
-                      : <span className="badge badge-success">OK</span>}
+                    {lateDelivery != null ? (
+                      lateDelivery === 1
+                        ? <span className="badge badge-danger">LATE</span>
+                        : <span className="badge badge-success">ON TIME</span>
+                    ) : <span style={{ color: "#9ca3af" }}>Pending</span>}
                   </td>
                 </tr>
               );
