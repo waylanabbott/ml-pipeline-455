@@ -26,3 +26,5 @@ bivariate_*.png
 distributions.png
 residual_*.png
 delivery_analysis.png
+data/shop.db-shm
+data/shop.db-wal
