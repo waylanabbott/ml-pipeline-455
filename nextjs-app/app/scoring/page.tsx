@@ -29,7 +29,7 @@ export default function ScoringPage() {
     <>
       <h1 style={{ marginBottom: "0.5rem" }}>Run Scoring</h1>
       <p style={{ color: "#6b7280", marginBottom: "1.5rem" }}>
-        Execute the ML inference script to score all unscored orders for late delivery risk.
+        Execute the ML inference script to score all unscored orders for fraud risk.
       </p>
 
       <div className="card">
@@ -61,7 +61,7 @@ export default function ScoringPage() {
 
         {status === "done" && (
           <p style={{ marginTop: "1rem" }}>
-            <a href="/warehouse/priority">View Priority Queue &rarr;</a>
+            <a href="/warehouse/priority">View Fraud Queue &rarr;</a>
           </p>
         )}
       </div>

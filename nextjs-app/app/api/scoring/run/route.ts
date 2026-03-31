@@ -2,25 +2,23 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/db";
 
 export async function POST() {
-  // In production (Vercel), scoring is pre-computed.
-  // This endpoint checks for unscored orders and reports status.
   const { count: totalOrders } = await supabase
     .from("orders")
     .select("*", { count: "exact", head: true });
 
   const { count: scoredOrders } = await supabase
-    .from("delivery_predictions")
+    .from("order_predictions")
     .select("*", { count: "exact", head: true });
 
   const unscored = (totalOrders || 0) - (scoredOrders || 0);
 
   if (unscored > 0) {
     return NextResponse.json({
-      output: `${scoredOrders} of ${totalOrders} orders scored. ${unscored} unscored orders — run 'python3 jobs/run_delivery_inference.py' locally to score new orders, then re-import to Supabase.`,
+      output: `${scoredOrders} of ${totalOrders} orders scored for fraud. ${unscored} unscored orders remain — run 'python3 jobs/run_inference.py' locally to score new orders.`,
     });
   }
 
   return NextResponse.json({
-    output: `All ${totalOrders} orders have been scored. ${scoredOrders} predictions in the delivery_predictions table. View the priority queue for results.`,
+    output: `All ${totalOrders} orders have been scored for fraud. ${scoredOrders} predictions in the order_predictions table. View the fraud queue for results.`,
   });
 }
