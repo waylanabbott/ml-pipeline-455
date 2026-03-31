@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 interface Customer {
   customer_id: number;
@@ -15,6 +16,8 @@ interface Customer {
 export default function SelectCustomer() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  const showPrompt = searchParams.get("msg") === "please-select";
 
   useEffect(() => {
     fetch("/api/customers")
@@ -39,6 +42,14 @@ export default function SelectCustomer() {
 
   return (
     <>
+      {showPrompt && (
+        <div style={{
+          background: "#fef3c7", border: "1px solid #f59e0b", borderRadius: 8,
+          padding: "0.75rem 1rem", marginBottom: "1rem", color: "#92400e", fontWeight: 500,
+        }}>
+          Please select a customer before continuing.
+        </div>
+      )}
       <h1 style={{ marginBottom: "1rem" }}>Select Customer</h1>
       <input
         className="search-box"

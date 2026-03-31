@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function OrdersPage() {
   const cookieStore = await cookies();
   const cid = cookieStore.get("customer_id")?.value;
-  if (!cid) redirect("/select-customer");
+  if (!cid) redirect("/select-customer?msg=please-select");
 
   const { data: orders } = await supabase
     .from("orders")
