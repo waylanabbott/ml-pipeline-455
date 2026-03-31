@@ -1,0 +1,21 @@
+node_modules/
+.next/
+.env.local
+*.pkl
+__pycache__/
+.DS_Store
+*.pyc
+.ipynb_checkpoints/
+
+# Large class datasets (not part of the pipeline project)
+CreditCardData.csv
+job_search_cleaned.csv
+job_search_platform_efficacy_100k.csv
+student_enrollment_sample.csv
+hotel_reservations.csv
+cleaned_delivery_data.csv
+last_mile_delivery_stops_1000.csv
+bivariate_*.png
+distributions.png
+residual_*.png
+delivery_analysis.png
