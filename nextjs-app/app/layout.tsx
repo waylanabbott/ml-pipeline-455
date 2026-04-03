@@ -28,10 +28,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <a href="/orders">Orders</a>
           <a href="/warehouse/priority">Warehouse</a>
           <a href="/scoring">Run Scoring</a>
-          {customerName && (
-            <span style={{ marginLeft: "auto", color: "#93c5fd", fontSize: "0.85rem" }}>
-              Logged in as: {customerName}
+          {customerName ? (
+            <span style={{ marginLeft: "auto", color: "#93c5fd", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              Viewing data for: {customerName}
+              <a href="/api/select-customer/clear" style={{ color: "#bfdbfe" }}>Clear selection</a>
             </span>
+          ) : (
+            <span style={{ marginLeft: "auto", color: "#cbd5e1", fontSize: "0.85rem" }}>No customer selected</span>
           )}
         </nav>
         <div className="container">{children}</div>

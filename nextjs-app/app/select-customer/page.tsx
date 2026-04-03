@@ -16,6 +16,7 @@ interface Customer {
 export default function SelectCustomer() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
+  const [savedMsg, setSavedMsg] = useState("");
   const searchParams = useSearchParams();
   const showPrompt = searchParams.get("msg") === "please-select";
 
@@ -37,7 +38,7 @@ export default function SelectCustomer() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ customer_id: id }),
     });
-    window.location.href = "/dashboard";
+    setSavedMsg(`Customer #${id} saved. Use the nav links to view their data, or clear selection from the top bar.`);
   }
 
   return (
@@ -57,6 +58,11 @@ export default function SelectCustomer() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
+      {savedMsg && (
+        <p style={{ marginBottom: "0.75rem", color: "#16a34a", fontWeight: 600 }}>
+          {savedMsg}
+        </p>
+      )}
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
           <thead>

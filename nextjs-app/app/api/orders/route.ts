@@ -1,13 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/db";
 
+function buildOrderId(base?: number) {
+  // Use epoch seconds to avoid the misaligned Postgres sequence that was
+  // causing duplicate primary-key errors. Bump by 1 on retries if needed.
+  const seed = Math.floor(Date.now() / 1000);
+  return base != null ? base : seed;
+}
+
 export async function POST(req: NextRequest) {
-  const cid = req.cookies.get("customer_id")?.value;
-  if (!cid) {
-    return NextResponse.json({ error: "No customer selected" }, { status: 401 });
+  const body = await req.json();
+  const cid = body.customer_id ?? req.cookies.get("customer_id")?.value;
+  if (cid == null) {
+    return NextResponse.json({ error: "Please choose a customer before submitting an order." }, { status: 400 });
   }
 
-  const { items, payment_method, device_type } = await req.json();
+  const customerId = Number(cid);
+  if (!Number.isInteger(customerId) || customerId <= 0) {
+    return NextResponse.json({ error: "Invalid customer id" }, { status: 400 });
+  }
+
+  const { items, payment_method, device_type } = body;
   if (!items || items.length === 0) {
     return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
   }
@@ -22,29 +35,46 @@ export async function POST(req: NextRequest) {
 
   const now = new Date().toISOString();
 
-  // Insert order
-  const { data: order, error: orderErr } = await supabase
-    .from("orders")
-    .insert({
-      customer_id: Number(cid),
-      order_datetime: now,
-      billing_zip: "00000",
-      shipping_zip: "00000",
-      shipping_state: "XX",
-      payment_method,
-      device_type,
-      ip_country: "US",
-      promo_used: 0,
-      promo_code: null,
-      order_subtotal: subtotal,
-      shipping_fee: shippingFee,
-      tax_amount: tax,
-      order_total: total,
-      risk_score: 0,
-      is_fraud: 0,
-    })
-    .select("order_id")
-    .single();
+  // Insert order with a resilient primary key to avoid the duplicate-key errors
+  // coming from the existing SERIAL sequence.
+  let orderId = buildOrderId();
+  let orderErr;
+  let order;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data, error } = await supabase
+      .from("orders")
+      .insert({
+        order_id: orderId,
+        customer_id: customerId,
+        order_datetime: now,
+        billing_zip: "00000",
+        shipping_zip: "00000",
+        shipping_state: "XX",
+        payment_method,
+        device_type,
+        ip_country: "US",
+        promo_used: 0,
+        promo_code: null,
+        order_subtotal: subtotal,
+        shipping_fee: shippingFee,
+        tax_amount: tax,
+        order_total: total,
+        risk_score: 0,
+        is_fraud: 0,
+      })
+      .select("order_id")
+      .single();
+
+    order = data;
+    orderErr = error;
+    if (!orderErr) break;
+    // If the sequence is still off, bump the id and retry a couple times.
+    if (orderErr?.message?.includes("duplicate key value violates unique constraint")) {
+      orderId += 1;
+      continue;
+    }
+    break;
+  }
 
   if (orderErr || !order) {
     return NextResponse.json({ error: orderErr?.message || "Failed to create order" }, { status: 500 });

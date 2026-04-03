@@ -14,17 +14,29 @@ interface CartItem {
   quantity: number;
 }
 
+interface Customer {
+  customer_id: number;
+  full_name: string;
+}
+
 export default function PlaceOrder() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerId, setCustomerId] = useState<number | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [deviceType] = useState("desktop");
   const [status, setStatus] = useState("");
 
   useEffect(() => {
-    fetch("/api/products")
-      .then((r) => r.json())
-      .then(setProducts);
+    Promise.all([
+      fetch("/api/products").then((r) => r.json()),
+      fetch("/api/customers").then((r) => r.json()),
+    ]).then(([productList, customerList]) => {
+      setProducts(productList);
+      setCustomers(customerList);
+      if (customerList.length > 0) setCustomerId(customerList[0].customer_id);
+    });
   }, []);
 
   function addToCart(p: Product) {
@@ -47,11 +59,16 @@ export default function PlaceOrder() {
 
   async function submitOrder() {
     if (cart.length === 0) return;
+    if (!customerId) {
+      setStatus("Please pick a customer before submitting.");
+      return;
+    }
     setStatus("Submitting...");
     const res = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        customer_id: customerId,
         items: cart.map((i) => ({
           product_id: i.product.product_id,
           quantity: i.quantity,
@@ -148,6 +165,17 @@ export default function PlaceOrder() {
           </div>
 
           <div className="card">
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>
+              Customer
+            </label>
+            <select value={customerId ?? ""} onChange={(e) => setCustomerId(Number(e.target.value))}>
+              {customers.map((c) => (
+                <option key={c.customer_id} value={c.customer_id}>
+                  {c.full_name} (#{c.customer_id})
+                </option>
+              ))}
+            </select>
+
             <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>
               Payment Method
             </label>
